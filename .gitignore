@@ -1,0 +1,9 @@
+# Build and Release Folders
+
+# Other files and folders
+.settings/
+settings.xml
+
+# Project files, i.e. `.project`
+# should NOT be excluded as they contain compiler settings and other important
+# information for Eclipse / Coldfusion Builder.
