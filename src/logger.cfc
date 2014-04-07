@@ -8,10 +8,8 @@ hint="a really simple logger" {
 	property name="level" type="string";
 
 
-	public logger function init( string level ) {
-		variables.out = createObject( 'java', 'java.lang.System' ).out;
-		variables.levels = "debug,info,warn,error,fatal"; // must be in this sequence
-		setLevel( structKeyExists( arguments, 'level' ) ? arguments.level : 'nil' );
+	public logger function init( required string level='nil' ) {
+		setLevel( arguments.level );
 		return this;
 	}
 
@@ -19,11 +17,29 @@ hint="a really simple logger" {
 
 	// override generated mutator
 	public void function setLevel( required string level ) {
-		var lvls = listAppend( getLevels(), 'nil' );
+		var found = FALSE;
+		var i = 0;
+		var lvls = "debug,info,warn,error,fatal,nil";
+
 		if ( !listFindNoCase( lvls, arguments.level ) ) {
 			throw( type='InvalidArgumentException', message='Level must be one of: #listChangeDelims( lvls, "|" )#' );
 		}
 		variables.level = lcase( arguments.level );
+
+		lvls = "debug,info,warn,error,fatal";
+		variables.levels = "";
+		while ( listLen( lvls ) ) {
+			if ( listFirst(lvls) == variables.level ) {
+				found = TRUE;
+			}
+
+			if ( found ) {
+				variables.levels = listAppend( variables.levels, listFirst(lvls) );
+			}
+
+			lvls = listRest(lvls);
+		}
+
 	}
 
 
@@ -75,15 +91,7 @@ hint="a really simple logger" {
 			return;
 		}
 
-		if ( structKeyExists( request, 'voib' ) ) {
-			if ( !structKeyExists( request['voib'], 'log' ) ) {
-				request['voib']['log'] = [ ];
-			}
-
-			arrayAppend( request['voib']['log'], arguments.message );
-		}
-
-//		variables.out.println( lcase( arguments.level ) & ': ' & arguments.message );
+		writelog( lcase( arguments.level ) & ': ' & arguments.message, 'console' );
 	}
 
 
@@ -96,18 +104,8 @@ hint="a really simple logger" {
 
 
 
-	private boolean function isLevelEnabled( required string level ) {
-		var lvl = getLevel();
-		var levels = getLevels();
-
-		while ( listLen( levels ) ) {
-			if ( lvl == listFirst(levels) && listFind( levels, arguments.level ) ) {
-				return TRUE;
-			}
-			levels = listRest(levels);
-		}
-
-		return FALSE;
+	private numeric function isLevelEnabled( required string level ) {
+		return listFind( variables.levels, lcase(arguments.level) );
 	}
 
 }

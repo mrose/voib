@@ -4,12 +4,17 @@
 		variables.registry = new voib.src.di.di1registry( '/voib/src/lexicon', { } );
 	}
 
+	if ( !structKeyExists( variables, 'logger' ) ) {
+		variables.logger = new voib.src.requestLogger( 'debug' );
+	}
+
+	if ( !structKeyExists( variables, 'mapping' ) ) {
+		variables.mapping = new voib.src.mapping.multicastmapping( registry=variables.registry );
+	}
+
 	if ( !structKeyExists( request, 'voib' ) ) {
-		variables.voib = new voib.src.context( { 'loglevel':'debug', 'registry':variables.registry } );
+		variables.voib = new voib.src.context( { 'logger':variables.logger, 'mapping':variables.mapping } );
 	}
 
 	invoke( variables.voib, missingMethodName, missingMethodArguments );
-writedump( request );
-writedump( variables );
-
 </cfscript>

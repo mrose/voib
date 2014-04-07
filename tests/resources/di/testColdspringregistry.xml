@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<beans>
+
+	<bean id="testBean" class="voib.tests.resources.testBean" />
+
+	<bean id="testHandlerA" class="voib.tests.resources.testHandler" />
+	<bean id="testHandlerB" class="voib.tests.resources.testHandler" />
+	<bean id="testHandlerC" class="voib.tests.resources.testHandler" />
+	<bean id="testHandlerD" class="voib.tests.resources.testHandler" />
+
+</beans>

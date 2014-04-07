@@ -11,7 +11,7 @@ It's git repository can be found at https://github.com/mrose/voib
 
 ## Copyright
 
-Copyright © 2014 Mitchell Rose.
+Copyright © 2005-2014 Mitchell Rose.
 
 ## License
 See [LICENSE](https://github.com/mrose/voib/tree/master/LICENSE) for details.

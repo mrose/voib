@@ -21,9 +21,6 @@ hint="A default registry. Doesn't do much" {
 
 
 
-	/**
-	 * @mxunit:expectedException InvalidBeanNameException
-	**/
 	public any function getBean( string beanName ) {
 		throw( type='InvalidBeanNameException', detail='bean not found dammit' );
 	}

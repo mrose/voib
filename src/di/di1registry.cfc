@@ -20,7 +20,7 @@ hint="Adapter for handler creation and caching using di1" {
 	public array function getAll() {
 		var names = listToArray( structKeyList( getBeanInfo().beanInfo ) ); // listToArray needed for acf9
 		var name = "";
-		var all = [];
+		var all = [ ];
 		var b = FALSE;
 
 		for ( name in names ) {
@@ -40,10 +40,26 @@ hint="Adapter for handler creation and caching using di1" {
 	}
 
 
+
+	public any function getBean( required string beanName ) {
+		var bean = 0;
+
+		try {
+			bean = super.getBean( arguments.beanName );
+		} catch ( any e ) {
+			throw( type='InvalidBeanNameException', message=e.message, detail=e.detail );
+		}
+
+		return bean;
+	}
+
+
+
 	private string function calcExcludePattern( string folders ) {
 // TODO will be something like (aaa|bbb|lexicon)$
 		return "lexicon$";
 	}
+
 
 
 	// use unembroidered names only
