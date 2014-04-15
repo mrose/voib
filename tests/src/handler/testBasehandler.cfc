@@ -7,11 +7,12 @@ component extends="voib.tests.src.baseTest" {
 
 
 
-	// is the correct type
 	public void function testInit() {
+		// is the correct type
 		assert( isInstanceOf( handler, 'voib.src.handler.basehandler' ) );
 		debug( handler );
-		// defaults:
+
+		// has defaults:
 		assert( handler.getAccess() == 'private' );
 		assert( handler.getName() == 'voib.src.handler.basehandler' );
 		assert( handler.getComment() == '' );
@@ -20,6 +21,22 @@ component extends="voib.tests.src.baseTest" {
 		assert( handler.getRule() == FALSE );
 	}
 
+
+	public void function testAnnotations() {
+		// you can use annotations for the default properties, except for rule
+//		handler = new voib.tests.resources.testHandler();
+//		makePublic( handler, 'listenMetadata' );
+//		handler.listenMetadata();
+//		assert( arrayFind( handler.getListen(), 'eat' ) );
+//		assert( arrayFind( handler.getListen(), 'drink' ) );
+//		assert( arrayFind( handler.getListen(), 'sleep' ) );
+
+
+		// annotations take precedence over constructor arguments
+		// TODO: probably should be the other way round
+
+		fail('code me');
+	}
 
 
 	// the basehandler execute should throw an error of type "Method.NotImplemented"
@@ -118,12 +135,8 @@ component extends="voib.tests.src.baseTest" {
 
 
 
-	public void function testListenMetadata() {
-		handler = new voib.tests.resources.testHandler();
-		makePublic( handler, 'listenMetadata' );
-		handler.listenMetadata();
-		assert( arrayFind( handler.getListen(), 'eat' ) );
-		assert( arrayFind( handler.getListen(), 'drink' ) );
-		assert( arrayFind( handler.getListen(), 'sleep' ) );
+	public void function testOnMissingMethod() {
+		// missing methods and their arguments are provided to the context for fulfillment
+		fail( 'code me' );
 	}
 }

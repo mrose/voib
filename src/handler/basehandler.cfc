@@ -1,7 +1,7 @@
 component
 displayname="voib.src.handler.basehandler"
 accessors="TRUE"
-hint="Base object that must be used for all framework Handler subclasses implementing functionality based on a command;
+hint="Transient base object that must be used for all framework Handler subclasses implementing functionality based on a command;
 intended to allow indefinite extensibility. Implementations can use the Order property to specify a priority
 for getting applied." {
 
@@ -13,52 +13,51 @@ for getting applied." {
 	property type="numeric" name="order" hint="priority for being applied";
 	property type="array" name="listen" hint="optional array of command names this handler will listen for";
 	property type="any" name="rule" hint="a Rule";
+	property type="voib.src.command" name="command" hint="a voib command";
+	property type="voib.src.context" name="context" hint="the voib context";
 
 
 	public voib.src.handler.basehandler function init( string access, string name, string comment, numeric order, array listen, any rule ) {
-		setAccess( structKeyExists( arguments, 'access' ) ? arguments.access : 'private' );
-		setName( structKeyExists( arguments, 'name' ) ? arguments.name : getMetaData( this ).name );
-		setComment( structKeyExists( arguments, 'comment' ) ? arguments.comment : '' );
-		setOrder( structKeyExists( arguments, 'order' ) ? arguments.order : 999999999 );
-		setListen( structKeyExists( arguments, 'listen' ) ? arguments.listen : [ ] );
-		listenMetadata();
-		setRule( structKeyExists( arguments, 'rule' ) ? arguments.rule : FALSE );
+		setProperties( argumentCollection=arguments );
 		return this;
 	}
 
 
 
-	public void function execute( required any command, required any context ) hint="performs the primary processing task of the framework" {
+	public void function execute() hint="performs the primary processing task of the framework" {
 		throw( type="Method.NotImplemented", message="The basehandler's execute method is abstract and must be overridden" );
-		arguments.context.debug(  getMetaData( this ).name & ': completed' );
+		getContext.debug(  getMetaData( this ).name & ': completed' );
 	}
 
 
 
-	public boolean function acceptable( required any command, required any context ) {
+	public boolean function acceptable() {
 
-		if ( !hasValidCommand( arguments.command.getName() ) ) {
-			arguments.context.debug( getName() & ': does not listen for command #arguments.command.getName()#' );
+		var cmd = getCommand();
+		var cxt = getContext();
+
+		if ( !hasValidCommand( cmd.getName() ) ) {
+			cxt.debug( getName() & ': does not listen for command #cmd.getName()#' );
 			return FALSE;
 		}
 
-		if ( !hasValidAccess( arguments.command.getAccess() ) ) { 
-			arguments.context.error( getName() & ': could not assign a #getAccess()# handler to #arguments.command.getAccess()# command #arguments.command.getName()#' );
+		if ( !hasValidAccess( cmd.getAccess() ) ) { 
+			cxt.error( getName() & ': could not assign a #getAccess()# handler to #cmd.getAccess()# command #cmd.getName()#' );
 			return FALSE;
 		}
 
-		switch( hasValidRule( arguments.context.getData() ) ) {
+		switch( hasValidRule( cxt.getData() ) ) {
 
 			case 0:
-				arguments.context.debug( getName() & ': did not match rule ( #getRule().ruleText()# )' );
+				cxt.debug( getName() & ': did not match rule ( #getRule().ruleText()# )' );
 				return FALSE;
 
 			case 1:
-				arguments.context.warn( getName() & ': no rule configured' );
+				cxt.info( getName() & ': no rule configured' );
 				break;
 
 			case 2:
-				arguments.context.debug( getName() & ': matched rule ( #getRule().ruleText()# )' );
+				cxt.debug( getName() & ': matched rule ( #getRule().ruleText()# )' );
 
 		}
 
@@ -128,15 +127,28 @@ for getting applied." {
 
 
 
-	// looks for voib_listen="commandName1,commandName2,etc" 
-	// or @voib_listen attribute 
-	// in function metadata and appends to listen array
-	private void function listenMetadata() {
-		var cfcMetadata = getMetaData( this );
+	public any function onMissingMethod( required string missingMethodName, required struct missingMethodArguments ) {
+		var result = invoke( getContext(), missingMethodName, missingMethodArguments );
+	}
 
-		if ( structKeyExists( cfcMetadata, 'voib_listen' ) ) {
-			arrayAppend( variables.listen, listToArray( cfcMetadata.voib_listen ), TRUE );
+
+
+	// constructor takes precedence over annotations/metadata, so dependency injection works as expected 
+	private void function setProperties( string access, string name, string comment, numeric order, array listen, any rule ) {
+		var cfcMetadata = getMetaData( this );
+		var defaults = { 'access'="private", 'name' = getMetaData( this ).name, 'comment' = "", 'order' = 999999999, 'listen' = arrayNew(), 'rule'=FALSE };
+
+		if ( structKeyExists( cfcMetadata, 'listen' ) ) {
+			cfcMetadata.listen = listToArray( cfcMetadata.listen );
 		}
+
+		setAccess( structKeyExists( arguments, 'access' ) ? arguments.access : structKeyExists( cfcMetadata, 'access' ) ? cfcMetadata.access : defaults.access );
+		setName( structKeyExists( arguments, 'name' ) ? arguments.name : structKeyExists( cfcMetadata, 'name' ) ? cfcMetadata.name : defaults.name );
+		setComment( structKeyExists( arguments, 'comment' ) ? arguments.comment : structKeyExists( cfcMetadata, 'comment' ) ? cfcMetadata.comment : defaults.comment );
+		setOrder( structKeyExists( arguments, 'order' ) ? arguments.order : structKeyExists( cfcMetadata, 'order' ) ? cfcMetadata.order : defaults.order );
+		setListen( structKeyExists( arguments, 'listen' ) ? arguments.listen : structKeyExists( cfcMetadata, 'listen' ) ? cfcMetadata.listen : defaults.listen );
+		setRule( structKeyExists( arguments, 'rule' ) ? arguments.rule : structKeyExists( cfcMetatdata, 'rule' ) ? cfcMetadata.rule : defaults.rule );
+
 	}
 
 }

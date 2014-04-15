@@ -23,7 +23,7 @@ component {
 
 	public any function onMissingMethod( required string missingMethodName, required struct missingMethodArguments ) {
 		// any unknown function declaration automatically passed to voib for resolution
-		include "voib.src.Application.cfc";
+		include "/voib/src/voib.cfm";
 	}
 
 }

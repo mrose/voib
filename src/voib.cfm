@@ -16,5 +16,5 @@
 		variables.voib = new voib.src.context( { 'logger':variables.logger, 'mapping':variables.mapping } );
 	}
 
-	invoke( variables.voib, missingMethodName, missingMethodArguments );
+	request['voib']['data'] = invoke( variables.voib, missingMethodName, missingMethodArguments );
 </cfscript>

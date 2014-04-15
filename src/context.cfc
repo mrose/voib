@@ -3,41 +3,50 @@ displayname="voib.src.context"
 accessors="TRUE"
 hint="an invocation context" {
 
+// provides a facade to logging operations with its logger
+// provides api for command creation and processing
+// maps handlers to commands with its mapper
 
-	property name="deque" setter="FALSE";
-	property name="logger" setter="FALSE";
-	property name="mapping" setter="FALSE";
+	property name="deque"            type="any"     setter="FALSE";
+	property name="logger"           type="any"     setter="FALSE" hint="Required. Defaults to a no-op logger";
+	property name="mapping"          type="any"     setter="FALSE" hint="Required. Defaults to a default mapping";
+	property name="result"           type="any"                 hint="Optional return value. Defaults to TRUE";
+	property name="throwOnException" type="boolean" setter="FALSE" hint="Optional. Determines how exceptions are handled. Defaults to FALSE";
 
 
-	public context function init( struct args ) {
+	public context function init() {
 
 		variables.deque = createObject( 'java', 'java.util.ArrayDeque' );
+		variables.logger = structKeyExists( arguments, 'logger' )? arguments.logger : new voib.src.logger();
+		variables.mapping = structKeyExists( arguments, 'mapping' )? arguments.mapping : new voib.src.mapping.basemapping();
+		setResult( structKeyExists( arguments, 'result' )? arguments.result : TRUE );
+		variables.throwOnException = structKeyExists( arguments, 'throwOnException' )? arguments.throwOnException : FALSE;
 
+		// GLOBAL PER-REQUEST FRAMEWORK CONTROL ELEMENTS
+		// do not mess with these unless you know what you're doing
 		if ( !structKeyExists( request, 'voib' ) ) {
-			request['voib'] = structKeyExists( arguments, 'args' )? arguments.args: { } ;
-			request['voib']['id'] = createUUID();
+			request['voib'] = {
+				  'id' = createUUID()
+				, 'code' = "200"
+				, 'data' = structNew()
+				, 'executedCommands' = arrayNew()
+				, 'exceptions' = arrayNew()
+				, 'invocationControl' = "next" // next|clear|halt
+				, 'invocationDepth' = "0"
+				, 'maximumCommands' = 1000
+				, 'maximumDepth' = 100
+				, 'message' = "OK"
+				, 'output' = ""
+				, 'processingSequence' = "0"
+			};
 
-			param name="request['voib']['data']" default="#{ }#";
-			param name="request['voib']['type']" default="";
-			param name="request['voib']['message']" default="OK";
-			param name="request['voib']['detail']" default="";
-			param name="request['voib']['extendedInfo']" default="";
-			param name="request['voib']['code']" default="200";
-			param name="request['voib']['severity']" default="information";
-			param name="request['voib']['invocationControl']" default="next";
-			param name="request['voib']['invocationDepth']" default="0";
-			param name="request['voib']['processingSequence']" default="0";
-			param name="request['voib']['executedCommands']" default="#[ ]#";
-			param name="request['voib']['maximumCommands']" default="1000";
-			param name="request['voib']['maximumDepth']" default="100";
-			param name="request['voib']['throwOnException']" default="FALSE";
-			param name="request['voib']['output']" default="";
-			param name="request['voib']['logger']" default="#new voib.src.logger()#";
-			param name="request['voib']['mapping']" default="#new voib.src.mapping.basemapping()#";
+			structAppend( request['voib'], arguments, true );
+
+			structDelete( request['voib'], 'logger' );
+			structDelete( request['voib'], 'mapping' );
+			structDelete( request['voib'], 'throwOnException' );
 		}
 
-		variables.logger = request['voib']['logger'];
-		variables.mapping = request['voib']['mapping'];
 		this.info( 'context created' );
 		return this;
 	}
@@ -46,7 +55,12 @@ hint="an invocation context" {
 
 	public any function onMissingMethod( missingMethodName, missingMethodArguments ) {
 		var cmd = FALSE;
-		var cxt = FALSE;
+		var result = getResult();
+
+		// if there's a command already in play
+		if ( !variables.deque.isEmpty() ) {
+			return dispatch( arguments.missingMethodName, arguments.missingMethodArguments );
+		}
 
 		try {
 
@@ -67,10 +81,10 @@ hint="an invocation context" {
 
 				info( 'Process of command #cmd.getName()# starts, invocation #request['voib']['invocationDepth']#, processingSequence #request['voib']['processingSequence']#, #variables.deque.size()# commands remaining' );
 
-				// map handlers & execute
-				cmd.execute( this );
+				cmd.setMemento( duplicate( request['voib']['data'] ) );
+				processCommand( cmd );
 
-				// place the processed command onto a stack for possible undo
+				// place the processed command onto audit stack for possible undo
 				arrayAppend( request['voib']['executedCommands'], cmd ); 
 				info( 'Process of command #cmd.getName()# ends with #request['voib']['invocationControl']#' );
 
@@ -82,12 +96,38 @@ hint="an invocation context" {
 
 		} catch ( any e ) {
 			handleException( e );
+
 		} finally {
 			debug( 'invocation #request['voib']['invocationDepth']--# ends' );
 
 		}
 
-		return request['voib'];
+		return getResult();
+	}
+
+
+
+	// map handlers & execute
+	private void function processCommand( required any command ) {
+		var h = FALSE;
+		var handlers = [ ];
+		var i = 0;
+
+		if ( mapHandlers( arguments.command ) ) {
+			handlers = arguments.command.getHandlers();
+
+			while ( arrayLen( handlers ) > i ) {
+
+				h = handlers[++i];
+				h.setContext( this );
+				h.setCommand( arguments.command );
+				h.execute();
+
+				if ( !this.shouldContinue() ) {
+					break;
+				}
+			}
+		}
 	}
 
 
@@ -98,49 +138,58 @@ hint="an invocation context" {
 
 
 
-	// public because command calls it when mapping - prolly means we should refactor
-	public boolean function noHandlerFound( required any command ) hint="extension point for when handler mapping is not found" {
-		warn( 'No handlers were mapped to #arguments.command.getAccess()# command #arguments.command.getName()#' );
-		return FALSE;
+	private boolean function mapHandlers( required any command ) {
+		var handlers = [ ];
+
+		if ( arguments.command.hasHandlers() ) {
+			this.debug( 'Handler(s) #getHandlerNames()# are premapped to command #arguments.command.getName()#' );
+			return TRUE;
+		}
+
+		handlers = this.getMapping().getHandlers( arguments.command );
+		arguments.command.setHandlers( isArray( handlers ) ? handlers : [ handlers ] );
+		if ( arguments.command.hasHandlers() ) {
+			this.debug( 'Handler(s) #arguments.command.getHandlerNames()# are now mapped to command #arguments.command.getName()#' );
+			return TRUE;
+		}
+
+		return dispatch( 'noHandlerFound', { 'command'=arguments.command } );
 	}
 
 
 
+	// must be a context method since we must handle MaximumInvocationsExceptions and MaximumCommandExceptions internally
 	private void function handleException( required any exception ) hint="extension point for exception handling" {
 
-		if ( request['voib']['throwOnException'] ) {
+		// to prevent endless iteration, maximumInvocations/Commands must terminate
+		if ( getThrowOnException() || ( listFindNoCase( 'MaximumInvocationsException,MaximumCommandsException', arguments.exception.type ) ) ) {
 			structAppend( request['voib'], arguments.exception, TRUE ); // true = overwrite
+//			arrayAppend( request['voib']['exceptions'], arguments.exception );
 			request['voib']['code'] = 500;
-			request['voib']['severity'] = 'error';
-			throw( arguments.exception );
-		}
-
-		// prevent endless iteration
-		if ( listFindNoCase( 'MaximumInvocationsException,MaximumCommandsException', arguments.exception.type ) ) {
-			structAppend( request['voib'], arguments.exception, TRUE ); // true = overwrite
-			request['voib']['code'] = 500;
-			request['voib']['severity'] = 'error';
-			request['voib']['invocationControl'] = 'halt';
 			request['voib']['severity'] = 'fatal';
-			request['voib']['type'] = arguments.exception.type;
-			error( trim( request['voib']['message'] & ' ' & request['voib']['detail'] ) );
+			request['voib']['invocationControl'] = 'halt';
+			fatal( trim( request['voib']['message'] & ' ' & request['voib']['detail'] ) );
+			structDelete( request['voib'], 'StackTrace' );
+
+			if ( getThrowOnException() ) {
+				throw( arguments.exception );
+			}
+
 			return;
 		}
 
-		// let's be optimistic about exceptions, trying to carry on in spite of them
+		// throwOnException defaults to FALSE
+		// so let's be optimistic about exceptions
+		// try to carry on in spite of them
 		request['voib']['invocationControl'] = 'next';
-
-//			structDelete( request['voib'], 'ErrorCode' );
-//			structDelete( request['voib'], 'ErrNumber' );
-			structDelete( request['voib'], 'StackTrace' );
-//			structDelete( request['voib'], 'TagContext' );
-
-		error( trim( request['voib']['message'] & ' ' & request['voib']['detail'] ) );
+		arrayAppend( request['voib']['exceptions'], arguments.exception );
+		error( trim( arguments.exception['message'] & ' ' & arguments.exception['detail'] ) );
 	}
 
 
-
 	// ---------------------- API for logging ------------------------ //
+
+
 
 	private string function logID() { return "[uid:#request['voib']['id']#] "; }
 
@@ -160,10 +209,11 @@ hint="an invocation context" {
 
 	// ---------------------- API for command invocation ------------------------ //
 
-	public any function dispatch()  hint="takes multiple duck-typed arguments" {
-		var cxt = new context();
-		cxt.onMissingMethod( argumentCollection = arguments );
+	public any function dispatch() hint="takes multiple duck-typed arguments" {
+		var cxt = new context( getLogger(), getMapping() );
+		return cxt.onMissingMethod( argumentCollection = arguments );
 	}
+
 
 
 	public any function newCommand( any name, struct args, string access ) hint="Commands can be created in a number of ways.<ol><li>If the 'name' argument is not provided, the default Command is returned.</li><li>If the name argument is a struct, the struct arguments are used to create the Command.</li><li>If the name argument is a string, the default properties are used for Command creation.</li></ol>" {
@@ -331,14 +381,14 @@ hint="an invocation context" {
 	// ---------------------- candy API for data ------------------------ //
 
 	public voib.src.context function setData( required struct data ) {
-		request['voib']['data'] = arguments.data;
+		variables.data = arguments.data;
 		return this; // allow method chaining
 	}
 
 
 
 	public struct function getData() {
-		return request['voib']['data'];
+//???		return request['voib']['data'];
 	}
 
 

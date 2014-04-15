@@ -25,21 +25,6 @@ component extends="voib.tests.src.baseTest" {
 
 
 
-	public void function testExecute() {
-		fail( 'todo' );
-	}
-
-
-
-	public void function testMapHandlers() {
-		fail( 'todo' );
-		// setHandlers[]
-		// then mapping
-		// then hasHandlers
-	}
-
-
-
 	public void function testHasHandlers() {
 		var b = command.hasHandlers();
 		debug( b );
