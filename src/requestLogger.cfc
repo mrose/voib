@@ -7,6 +7,7 @@ hint="a really simple logger that logs to the request scope" {
 
 	private void function write( required string level, required any message ) {
 		var msg = trim( serialize( arguments.message ) );
+		var typ = lcase( arguments.level );
 
 		if ( !isLevelEnabled( lcase( arguments.level ) ) || !len( msg ) ) {
 			return;
@@ -17,7 +18,11 @@ hint="a really simple logger that logs to the request scope" {
 				request['voib']['log'] = [ ];
 			}
 
-			arrayAppend( request['voib']['log'], arguments.message );
+			if ( structKeyExists( request['voib'], 'id' ) ) {
+				msg = "[id:" & request['voib']['id'] & "] " & msg;
+			}
+
+			arrayAppend( request['voib']['log'], msg );
 		}
 
 	}

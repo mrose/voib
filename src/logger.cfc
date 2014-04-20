@@ -84,14 +84,34 @@ hint="a really simple logger" {
 */
 
 
+
 	private void function write( required string level, required any message ) {
 		var msg = trim( serialize( arguments.message ) );
+		var typ = lcase( arguments.level );
 
 		if ( !isLevelEnabled( lcase( arguments.level ) ) || !len( msg ) ) {
 			return;
 		}
 
-		writelog( lcase( arguments.level ) & ': ' & arguments.message, 'console' );
+		switch ( typ ) {
+
+			case 'info':
+				typ = 'information';
+				break;
+
+			case 'warn':
+				typ = 'warning';
+				break;
+		}
+
+
+		if ( structKeyExists( request, 'voib' ) && structKeyExists( request['voib'], 'id' ) ) {
+			msg = "[id:" & request['voib']['id'] & "] " & msg;
+		}
+
+
+		// railo only log to console
+		writelog( type=typ, text=lcase( arguments.level ) & ': ' & arguments.message, application=TRUE, log='console' );
 	}
 
 

@@ -10,14 +10,15 @@ hint="an invocation context" {
 	property name="deque"            type="any"     setter="FALSE";
 	property name="logger"           type="any"     setter="FALSE" hint="Required. Defaults to a no-op logger";
 	property name="mapping"          type="any"     setter="FALSE" hint="Required. Defaults to a default mapping";
-	property name="result"           type="any"                 hint="Optional return value. Defaults to TRUE";
+	property name="result"           type="any"                    hint="Optional return value. Defaults to TRUE";
 	property name="throwOnException" type="boolean" setter="FALSE" hint="Optional. Determines how exceptions are handled. Defaults to FALSE";
 
 
 	public context function init() {
+		var loglevel = structKeyExists( arguments, 'loglevel' )? arguments.loglevel : 'nil';
 
 		variables.deque = createObject( 'java', 'java.util.ArrayDeque' );
-		variables.logger = structKeyExists( arguments, 'logger' )? arguments.logger : new voib.src.logger();
+		variables.logger = structKeyExists( arguments, 'logger' )? arguments.logger : new voib.src.logger( level=loglevel );
 		variables.mapping = structKeyExists( arguments, 'mapping' )? arguments.mapping : new voib.src.mapping.basemapping();
 		setResult( structKeyExists( arguments, 'result' )? arguments.result : TRUE );
 		variables.throwOnException = structKeyExists( arguments, 'throwOnException' )? arguments.throwOnException : FALSE;
@@ -40,8 +41,10 @@ hint="an invocation context" {
 				, 'processingSequence' = "0"
 			};
 
+			// ok to place arbitrary arguments into the voib namespace
 			structAppend( request['voib'], arguments, true );
 
+			// but not the ones this context uses as private properties
 			structDelete( request['voib'], 'logger' );
 			structDelete( request['voib'], 'mapping' );
 			structDelete( request['voib'], 'throwOnException' );
@@ -187,17 +190,14 @@ hint="an invocation context" {
 	}
 
 
+
 	// ---------------------- API for logging ------------------------ //
 
-
-
-	private string function logID() { return "[uid:#request['voib']['id']#] "; }
-
-	public void function debug( required any message ) { getLogger().debug( logID() & arguments.message ); }
-	public void function info( required any message )  { getLogger().info( logID() & arguments.message ); }
-	public void function warn( required any message )  { getLogger().warn( logID() & arguments.message ); }
-	public void function error( required any message ) { getLogger().error( logID() & arguments.message ); }
-	public void function fatal( required any message ) { getLogger().fatal( logID() & arguments.message ); }
+	public void function debug( required any message ) { getLogger().debug( arguments.message ); }
+	public void function info( required any message )  { getLogger().info( arguments.message ); }
+	public void function warn( required any message )  { getLogger().warn( arguments.message ); }
+	public void function error( required any message ) { getLogger().error( arguments.message ); }
+	public void function fatal( required any message ) { getLogger().fatal( arguments.message ); }
 
 	public boolean function isDebugEnabled() { return getLogger().isDebugEnabled(); }
 	public boolean function isInfoEnabled() { return getLogger().isInfoEnabled(); }

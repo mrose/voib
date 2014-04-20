@@ -9,8 +9,7 @@ component extends="voib.tests.src.baseTest" {
 
 	public void function testInit() {
 		// is the correct type
-		var logger = new voib.src.requestLogger('debug'); 
-		context = new voib.src.context( { 'logger'=logger } );
+		context = new voib.src.context();
 		assert( isInstanceOf( context, 'voib.src.context' ) );
 		debug( context );
 		debug( request );
@@ -57,34 +56,163 @@ component extends="voib.tests.src.baseTest" {
 	}
 
 
-	// provides logging functions with the loglevel defined at initialization (defaults to 'nil')
+	// you can set the logging level of the default logger
+	// loglevel must be one of: debug|info|warn|error|fatal|nil
+	/**
+	* @mxunit:expectedException InvalidArgumentException
+	*/
+	public void function testSetLogLevel() {
+		structDelete( request, 'voib' );
+		context = new voib.src.context( loglevel='foobar');
+	}
+
+
+	// logging functions
 	public void function testLogging() {
 		structDelete( request, 'voib' );
-		context = new voib.src.context();
+		context = new voib.src.context(); // default loglevel is 'nil'
 		assert( !context.isDebugEnabled() );
 		assert( !context.isInfoEnabled() );
 		assert( !context.isWarnEnabled() );
 		assert( !context.isErrorEnabled() );
 		assert( !context.isFatalEnabled() );
+
+		structDelete( request, 'voib' );
+		context = new voib.src.context( loglevel='debug' );
+		assert( context.isDebugEnabled() );
+		assert( context.isInfoEnabled() );
+		assert( context.isWarnEnabled() );
+		assert( context.isErrorEnabled() );
+		assert( context.isFatalEnabled() );
+
+		structDelete( request, 'voib' );
+		context = new voib.src.context( loglevel='info' );
+		assert( !context.isDebugEnabled() );
+		assert( context.isInfoEnabled() );
+		assert( context.isWarnEnabled() );
+		assert( context.isErrorEnabled() );
+		assert( context.isFatalEnabled() );
+
+		structDelete( request, 'voib' );
+		context = new voib.src.context( loglevel='warn' );
+		assert( !context.isDebugEnabled() );
+		assert( !context.isInfoEnabled() );
+		assert( context.isWarnEnabled() );
+		assert( context.isErrorEnabled() );
+		assert( context.isFatalEnabled() );
+
+		structDelete( request, 'voib' );
+		context = new voib.src.context( loglevel='error' );
+		assert( !context.isDebugEnabled() );
+		assert( !context.isInfoEnabled() );
+		assert( !context.isWarnEnabled() );
+		assert( context.isErrorEnabled() );
+		assert( context.isFatalEnabled() );
+
+		structDelete( request, 'voib' );
+		context = new voib.src.context( loglevel='fatal' );
+		assert( !context.isDebugEnabled() );
+		assert( !context.isInfoEnabled() );
+		assert( !context.isWarnEnabled() );
+		assert( !context.isErrorEnabled() );
+		assert( context.isFatalEnabled() );
 	}
 
 
+	// command factory functions
+
+	// can dispatch
+	public void function testDefaultDispatch() {
+		context = new voib.src.context();
+		var result = context.dispatch(); // dispatch the default command
+		assert( result );
+		debug( result );
+	}
+
+
+	// newCommand can create Commands depending on the arguments provided:
+	public void function testNewCommand() {
+		// public any newCommand( any name, struct args, string access )
+
+		// should create a default Command when no arguments are provided
+
+
+		// if the first argument is a Command , returns it
+
+		// if the first argument is a struct, should create a Command
+
+		// if the first argument is an array of valid elements, should return an array of Commands
+
+		// if the first argument is a string, should create a Command using the other arguments too
+
+		// if none of the above, should create a default Command
+		
+	}
+
+
+	// enstackCommand places command(s) on the top of the operating deque
+	public void function testEnstackCommand() {
+
+		// should create and place a default Command on top of the deque when no arguments are provided
+
+		// if the first argument is a Command , should create and place it on top of the deque
+
+		// if the first argument is a struct, should create a Command and place it on top of the deque
+
+		// if the first argument is an array of valid elements, should create and place an array of Commands on top of the deque
+
+		// if the first argument is a string, should create and place a Command on top of the deque using the other arguments too
+
+		// if none of the above, should create and place a default Command on top of the deque
+
+
+	}
+
+
+	// enqueueCommand places command(s) on the top of the operating deque
+	public void function testEnqueueCommand() {
+
+		// should create and place a default Command on the bottom of the deque when no arguments are provided
+
+		// if the first argument is a Command, should create and place it on the bottom of the deque
+
+		// if the first argument is a struct, should create a Command and place it on the bottom of the deque
+
+		// if the first argument is an array of valid elements, should create and place an array of Commands on the bottom of the deque
+
+		// if the first argument is a string, should create and place a Command on the bottom of the deque using the other arguments too
+
+		// if none of the above, should create and place a default Command on the bottom of the deque
+
+
+	}
+
+
+/*
+
+
+
+	private createCommand
+	private newCommands
+	clearCommands
+	dequeueCommand
+	hasCommands
+	destackCommand
+	peekCommand
+	sizeCommands
+
+
+
+*/
+
+
+	// candy data API
 
 	public void function testMapHandlers() {
 		fail( 'todo, or maybe not' );
 		// setHandlers[]
 		// then mapping
 		// then hasHandlers
-	}
-
-
-
-	// can dispatch
-	public void function testDefaultDispatch() {
-		context = new voib.src.context();
-		var result = context.dispatch();
-		assert( result );
-		debug( result );
 	}
 
 
