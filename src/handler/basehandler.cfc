@@ -17,8 +17,64 @@ for getting applied." {
 	property type="voib.src.context" name="context" hint="the voib context";
 
 
-	public voib.src.handler.basehandler function init( string access, string name, string comment, numeric order, array listen, any rule ) {
-		setProperties( argumentCollection=arguments );
+	public voib.src.handler.basehandler function init( string access, string name, string comment, numeric order, any listen, any rule ) {
+		// dependency injection should work as expected, thus constructor arguments take precedence over annotations/metadata
+		var md = getMetaData( this );
+
+		// set some reasonable defaults
+		setAccess( 'private' );
+		setName( '' );
+		setComment( '' );
+		setOrder( 999999999 );
+		setListen( 'nil' ); // since blank means listen for all, default is listen for the 'nil' command only
+		setRule( FALSE );
+
+		// if there are annotations/metadata , use them
+		if ( structKeyExists( md, 'access' ) ) {
+			setAccess( md.access );
+		}
+
+		if ( structKeyExists( md, 'name' ) ) {
+			setName( md.name );
+		}
+
+		if ( structKeyExists( md, 'comment' ) ) {
+			setComment( md.comment );
+		}
+
+		if ( structKeyExists( md, 'order' ) ) {
+			setOrder( md.order );
+		}
+
+		if ( structKeyExists( md, 'listen' ) ) {
+			setListen( md.listen );
+		}
+
+		// if there are constructor args , use them
+		if ( structKeyExists( arguments, 'access' ) ) {
+			setAccess( arguments.access );
+		}
+
+		if ( structKeyExists( arguments, 'name' ) ) {
+			setName( arguments.name );
+		}
+
+		if ( structKeyExists( arguments, 'comment' ) ) {
+			setComment( arguments.comment );
+		}
+
+		if ( structKeyExists( arguments, 'order' ) ) {
+			setOrder( arguments.order );
+		}
+
+		if ( structKeyExists( arguments, 'listen' ) ) {
+			setListen( arguments.listen );
+		}
+
+		if ( structKeyExists( arguments, 'rule' ) ) {
+			setRule( arguments.rule );
+		}
+
 		return this;
 	}
 
@@ -26,7 +82,7 @@ for getting applied." {
 
 	public void function execute() hint="performs the primary processing task of the framework" {
 		throw( type="Method.NotImplemented", message="The basehandler's execute method is abstract and must be overridden" );
-		getContext.debug(  getMetaData( this ).name & ': completed' );
+		getContext().debug(  getName() & ': completed' );
 	}
 
 
@@ -40,11 +96,13 @@ for getting applied." {
 			cxt.debug( getName() & ': does not listen for command #cmd.getName()#' );
 			return FALSE;
 		}
+		cxt.debug( getName() & ': listens for command #cmd.getName()#' );
 
 		if ( !hasValidAccess( cmd.getAccess() ) ) { 
 			cxt.error( getName() & ': could not assign a #getAccess()# handler to #cmd.getAccess()# command #cmd.getName()#' );
 			return FALSE;
 		}
+		cxt.debug( getName() & ': assigned a #getAccess()# handler to #cmd.getAccess()# command #cmd.getName()#' );
 
 		switch( hasValidRule( cxt.getData() ) ) {
 
@@ -85,6 +143,21 @@ for getting applied." {
 		variables.access = lCase( arguments.access );
 	}
 
+
+
+	public void function setListen( required any listen ) {
+		var v = arguments.listen;
+
+		if ( !isValid( 'string', v ) && ( !isArray( v ) ) ) {
+			throw( type='InvalidArgumentException', message='Listen must be a string, list, or array' );
+		}
+
+		if ( !isArray( v ) ) {
+			v = listToArray( arguments.listen );
+		}
+
+		variables.listen = v;
+	}
 
 
 	public boolean function hasValidAccess( required string commandAccess ) hint="assure that a handler whose access property is private will not process a command whose access property is public" {
@@ -131,24 +204,5 @@ for getting applied." {
 		var result = invoke( getContext(), missingMethodName, missingMethodArguments );
 	}
 
-
-
-	// constructor takes precedence over annotations/metadata, so dependency injection works as expected 
-	private void function setProperties( string access, string name, string comment, numeric order, array listen, any rule ) {
-		var cfcMetadata = getMetaData( this );
-		var defaults = { 'access'="private", 'name' = getMetaData( this ).name, 'comment' = "", 'order' = 999999999, 'listen' = arrayNew(), 'rule'=FALSE };
-
-		if ( structKeyExists( cfcMetadata, 'listen' ) ) {
-			cfcMetadata.listen = listToArray( cfcMetadata.listen );
-		}
-
-		setAccess( structKeyExists( arguments, 'access' ) ? arguments.access : structKeyExists( cfcMetadata, 'access' ) ? cfcMetadata.access : defaults.access );
-		setName( structKeyExists( arguments, 'name' ) ? arguments.name : structKeyExists( cfcMetadata, 'name' ) ? cfcMetadata.name : defaults.name );
-		setComment( structKeyExists( arguments, 'comment' ) ? arguments.comment : structKeyExists( cfcMetadata, 'comment' ) ? cfcMetadata.comment : defaults.comment );
-		setOrder( structKeyExists( arguments, 'order' ) ? arguments.order : structKeyExists( cfcMetadata, 'order' ) ? cfcMetadata.order : defaults.order );
-		setListen( structKeyExists( arguments, 'listen' ) ? arguments.listen : structKeyExists( cfcMetadata, 'listen' ) ? cfcMetadata.listen : defaults.listen );
-		setRule( structKeyExists( arguments, 'rule' ) ? arguments.rule : structKeyExists( cfcMetatdata, 'rule' ) ? cfcMetadata.rule : defaults.rule );
-
-	}
 
 }

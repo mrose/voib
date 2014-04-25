@@ -1,6 +1,6 @@
 <cfcomponent
 displayname="rendercomponentview"
-extends="voib.src.handler.transienthandler"
+extends="voib.src.handler.basehandler"
 accessors="TRUE"
 hint="renders output by delegating to a component view">
 
@@ -19,19 +19,23 @@ hint="renders output by delegating to a component view">
 		<cfset setInhibitDebugOutput( structKeyExists( arguments, 'inhibitDebugOutput' ) ? arguments.inhibitDebugOutput : FALSE ) />
 		<cfset setWriterComponent( structKeyExists( arguments, 'writerComponent' ) ? arguments.writerComponent : '' ) />
 		<cfset setWriterMethod( structKeyExists( arguments, 'writerMethod' ) ? arguments.writerMethod : '' ) />
-		<cfset setWriterArgs( structKeyExists( arguments, 'writerArgs' ) ? arguments.writerargs : '' ) />
+		<cfset setWriterArgs( structKeyExists( arguments, 'writerArgs' ) ? arguments.writerargs : { } ) />
 
-		<cfset super.init( listen=['onRequestEnd'] ) />
+		<cfset super.init() />
 		<cfreturn this />
 	</cffunction>
 
 
 	<cffunction name="execute" access="public" output="FALSE">
-		<cfargument name="result" type="struct" required="true" >
+		<cfset var result = request['voib'] />
 		<cfset var out = "" />
 		<cfset var args = getWriterArgs() />
-		<cfset structAppend( args, arguments.result, TRUE ) />
+		<cfset structAppend( args, result, TRUE ) />
 		<cfset var c = getWriterComponent() />
+
+		<cfif !acceptable() >
+			<cfreturn>
+		</cfif>
 
 		<cfif ( isSimpleValue( getWriterComponent() ) && !len( getWriterComponent() ) ) >
 			<cfthrow type="Method.MissingProperty" message='writerComponent is not initialized' />

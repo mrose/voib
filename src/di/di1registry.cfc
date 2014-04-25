@@ -47,7 +47,7 @@ hint="Adapter for handler creation and caching using di1" {
 		try {
 			bean = super.getBean( arguments.beanName );
 		} catch ( any e ) {
-			throw( type='InvalidBeanNameException', message=e.message, detail=e.detail );
+			throw( type='InvalidBeanNameException', message='for Bean #arguments.beanName#, ' & e.message, detail=e.detail, tagContext=e.tagcontext );
 		}
 
 		return bean;

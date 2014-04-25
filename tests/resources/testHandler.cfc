@@ -1,12 +1,15 @@
 component
 displayname="voib.tests.resources.testHandler"
 extends="voib.src.handler.basehandler"
-voib_listen="eat,drink,sleep"
+access="public"
+comment="testing"
+order="42"
+listen="eat,drink,sleep"
 hint="A test handler" {
 
-	public void function execute( required any command, required any context ) hint="" {
-		var cmd = arguments.command;
-		var cxt = arguments.context;
+	public void function execute() hint="" {
+		var cmd = getCommand();
+		var cxt = getContext();
 		cxt.trace(  getMetaData( this ).name & ': completed' );
 	}
 

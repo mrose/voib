@@ -19,8 +19,20 @@ component extends="voib.tests.src.baseTest" {
 
 
 
+	// handlers must be a component or array of them
+	/**
+	* @mxunit:expectedException InvalidArgumentException
+	*/
+	public void function testSetHandlersThrowsExceptionOnInvalidInput() {
+		var st = { };
+		command.setHandlers( st );
+	}
+
+
+
 	public void function testSetHandlers() {
 		command.setHandlers( [ h1, h2 ] );
+		command.setHandlers( h1 );
 	}
 
 

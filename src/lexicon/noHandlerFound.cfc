@@ -6,10 +6,14 @@ listen="noHandlerFound"
 hint="Extension point for handler mapping" {
 
 	public void function execute() {
+		if ( !acceptable() ) {
+			return;
+		}
+
 		var access = getCommand().getArg( 'command' ).getAccess();
 		var name = getCommand().getArg( 'command' ).getName();
 		warn( 'No handlers were mapped to #access# command #name#' );
-		setResult( 'FALSE' );
+		getContext().setResult( 'FALSE' );
 	}
 
 }

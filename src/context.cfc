@@ -42,6 +42,7 @@ hint="an invocation context" {
 			};
 
 			// ok to place arbitrary arguments into the voib namespace
+			// also this will overwrite the default framework control elements
 			structAppend( request['voib'], arguments, true );
 
 			// but not the ones this context uses as private properties
@@ -60,6 +61,7 @@ hint="an invocation context" {
 		var cmd = FALSE;
 		var result = getResult();
 
+// TODO: this is a bad way to determine if in play
 		// if there's a command already in play
 		if ( !variables.deque.isEmpty() ) {
 			return dispatch( arguments.missingMethodName, arguments.missingMethodArguments );
@@ -142,21 +144,22 @@ hint="an invocation context" {
 
 
 	private boolean function mapHandlers( required any command ) {
-		var handlers = [ ];
+		var cmd = arguments.command;
 
-		if ( arguments.command.hasHandlers() ) {
-			this.debug( 'Handler(s) #getHandlerNames()# are premapped to command #arguments.command.getName()#' );
+		if ( cmd.hasHandlers() ) {
+			this.debug( 'Handler(s) #cmd.getHandlerNames()# are premapped to command #cmd.getName()#' );
 			return TRUE;
 		}
 
-		handlers = this.getMapping().getHandlers( arguments.command );
-		arguments.command.setHandlers( isArray( handlers ) ? handlers : [ handlers ] );
-		if ( arguments.command.hasHandlers() ) {
-			this.debug( 'Handler(s) #arguments.command.getHandlerNames()# are now mapped to command #arguments.command.getName()#' );
+		cmd.setHandlers( this.getMapping().getHandlers( cmd ) );
+		if ( cmd.hasHandlers() ) {
+			this.debug( 'Handler(s) #cmd.getHandlerNames()# are now mapped to command #cmd.getName()#' );
 			return TRUE;
 		}
 
-		return dispatch( 'noHandlerFound', { 'command'=arguments.command } );
+		// if you are using the standard 'broadcast' mapping (multicastmapping.cfc) this should not happen
+		dispatch( name='noHandlerFound', args={ 'command'=cmd } );
+		return FALSE;
 	}
 
 
@@ -210,7 +213,8 @@ hint="an invocation context" {
 	// ---------------------- API for command invocation ------------------------ //
 
 	public any function dispatch() hint="takes multiple duck-typed arguments" {
-		var cxt = new context( getLogger(), getMapping() );
+		var cxt = new context( logger=getLogger(), mapping=getMapping() );
+		debug( 'created new context' );
 		return cxt.onMissingMethod( argumentCollection = arguments );
 	}
 
@@ -245,7 +249,7 @@ hint="an invocation context" {
 
 		// if the first argument is a string, we'll pass the rest of the arguments along, too
 		if ( structKeyExists( arguments, 'name' ) && isValid( 'string', arguments.name ) ) {
-			debug( 'newCommand argument (#arguments.name#) is a string' );
+			debug( 'newCommand argument is a string (#arguments.name#)' );
 			return createCommand( argumentCollection = arguments );
 		}
 
@@ -388,7 +392,7 @@ hint="an invocation context" {
 
 
 	public struct function getData() {
-//???		return request['voib']['data'];
+		return request['voib']['data'];
 	}
 
 

@@ -13,17 +13,20 @@ hint="a really simple logger that logs to the request scope" {
 			return;
 		}
 
-		if ( structKeyExists( request, 'voib' ) ) {
-			if ( !structKeyExists( request['voib'], 'log' ) ) {
-				request['voib']['log'] = [ ];
-			}
-
-			if ( structKeyExists( request['voib'], 'id' ) ) {
-				msg = "[id:" & request['voib']['id'] & "] " & msg;
-			}
-
-			arrayAppend( request['voib']['log'], msg );
+		if ( !structKeyExists( request, 'voib' ) ) {
+			request['voib'] = { };
 		}
+
+		if ( !structKeyExists( request['voib'], 'log' ) ) {
+			request['voib']['log'] = [ ];
+		}
+
+		if ( structKeyExists( request['voib'], 'id' ) ) {
+			id = request['voib']['id'];
+		}
+
+		msg = "[" & arguments.level & "] " & msg;
+		arrayAppend( request['voib']['log'], msg );
 
 	}
 

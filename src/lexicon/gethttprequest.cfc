@@ -30,13 +30,16 @@ hint="Marshalls url, form, cgi, and http header data to be used as input for pro
 	}
 
 
-// TODO: revise to transient
-	public void function execute( required any command, required any context ) {
-		var cmd = arguments.command;
-		var cxt = arguments.context;
+	public void function execute() {
+		var cmd = getCommand();
+		var cxt = getContext();
 		var key = "" ;
 		var requestData = {};
 		var i = 0;
+
+		if ( !acceptable() ) {
+			return;
+		}
 
 		for ( i=1; i <= listLen( getScopeSequence() ); i++ ) {
 			key = listGetAt( getScopeSequence(), i );

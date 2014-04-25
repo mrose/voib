@@ -1,6 +1,6 @@
 <cfcomponent
 displayname="rendermoduleview"
-extends="voib.src.handler.transienthandler"
+extends="voib.src.handler.basehandler"
 accessors="TRUE"
 hint="renders output by delegating to an cfmodule view">
 
@@ -13,14 +13,18 @@ hint="renders output by delegating to an cfmodule view">
 		<cfargument name="writerLocation" type="string" required="FALSE" />
 		<cfset setInhibitDebugOutput( structKeyExists( arguments, 'inhibitDebugOutput' ) ? arguments.inhibitDebugOutput : FALSE ) />
 		<cfset setWriterLocation( structKeyExists( arguments, 'writerLocation' ) ? arguments.writerLocation : '' ) />
-		<cfset super.init( listen=['onRequestEnd'] ) />
+		<cfset super.init() />
 		<cfreturn this />
 	</cffunction>
 
 
 	<cffunction name="execute" access="public" output="FALSE">
-		<cfargument name="result" type="struct" required="true" >
+		<cfset var result = request['voib'] />
 		<cfset var out = "" />
+
+		<cfif !acceptable() >
+			<cfreturn>
+		</cfif>
 
 		<cfif ( !len( getWriterLocation() ) ) >
 			<cfthrow type="Method.MissingProperty" message='writerLocation cannot be blank' />
