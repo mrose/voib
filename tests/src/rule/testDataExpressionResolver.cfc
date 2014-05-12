@@ -1,28 +1,26 @@
 component extends="voib.tests.src.baseTest" {
 
 	public void function setUp() {
-		dataExpressionResolver = new voib.src.rule.dataExpressionResolver();
+		dataExpressionResolver = new voib.src.rule.dataexpressionresolver();
 	}
-
 
 
 	public void function testInit() {
-		assert( isInstanceOf( dataExpressionResolver, 'voib.src.rule.dataExpressionResolver' ) );
+		assert( isInstanceOf( dataExpressionResolver, 'voib.src.rule.dataexpressionresolver' ) );
+		debug( dataExpressionResolver );
 	}
 
 
-
 	public void function testIsValidExpression() {
-		makePublic( dataExpressionResolver, 'isValidExpression' );
-		var b = dataExpressionResolver.isValidExpression( 'g?{actNaturally}' );
+		var b = dataExpressionResolver.isValidExpression( 'v?{actNaturally}' );
 		debug( b );
 		assert( b );
 
-		b = dataExpressionResolver.isValidExpression( 'g?{session.actNaturally}' );
+		b = dataExpressionResolver.isValidExpression( 'v?{session.actNaturally}' );
 		debug( b );
 		assert( b );
 
-		b = dataExpressionResolver.isValidExpression( 'g?{bands["beatles"]}' );
+		b = dataExpressionResolver.isValidExpression( 'v?{bands["beatles"]}' );
 		debug( b );
 		assert( b );
 
@@ -37,11 +35,11 @@ component extends="voib.tests.src.baseTest" {
 		debug( b );
 		assert( !b );
 
-		b = dataExpressionResolver.isValidExpression( 'g' );
+		b = dataExpressionResolver.isValidExpression( 'v' );
 		debug( b );
 		assert( !b );
 
-		b = dataExpressionResolver.isValidExpression( 'g{actNaturally}' );
+		b = dataExpressionResolver.isValidExpression( 'v{actNaturally}' );
 		debug( b );
 		assert( !b );
 
@@ -49,11 +47,10 @@ component extends="voib.tests.src.baseTest" {
 		debug( b );
 		assert( !b );
 
-		b = dataExpressionResolver.isValidExpression( 'g77{actNaturally' );
+		b = dataExpressionResolver.isValidExpression( 'v77{actNaturally' );
 		debug( b );
 		assert( !b );
 	}
-
 
 
 	/**
@@ -61,8 +58,8 @@ component extends="voib.tests.src.baseTest" {
 	**/
 	public void function testShouldThrowOnInvalidExprArgument() {
 		var data = {};
-		dataExpressionResolver.setInvalidExpression( 'g?{__invalidExpression}' );
-		dataExpressionResolver.resolveExpression( 'g?{__invalidExpression}', data );
+		dataExpressionResolver.setInvalidExpression( 'v?{__invalidExpression}' );
+		dataExpressionResolver.resolveExpression( 'v?{__invalidExpression}', data );
 	}
 
 
@@ -326,22 +323,22 @@ component extends="voib.tests.src.baseTest" {
 		var result = "";
 
 		cookie.firstName = "John";
-		result = dataExpressionResolver.resolveExpression( 'g?{cookie.firstname}', cookie );
+		result = dataExpressionResolver.resolveExpression( 'v?{cookie.firstName}', cookie );
 		debug( result );
 		assert( result == 'John' );
 
 		request.firstName="John";
-		result = dataExpressionResolver.resolveExpression( 'g?{request.firstname}', data );
+		result = dataExpressionResolver.resolveExpression( 'v?{request.firstName}', data );
 		debug( result );
 		assert( result == 'John' );
 
 		request.beatle = { 'firstName'="John", 'lastName'="Lennon" };
-		result = dataExpressionResolver.resolveExpression( 'g?{beatle.firstname}', request );
+		result = dataExpressionResolver.resolveExpression( 'v?{beatle.firstName}', request );
 		debug( result );
 		assert( result == 'John' );
 
 		request.beatle = { 'firstName'="John", 'lastName'="Lennon" };
-		result = dataExpressionResolver.resolveExpression( 'g?{request.beatle.firstname}', data );
+		result = dataExpressionResolver.resolveExpression( 'v?{request.beatle.firstName}', data );
 		debug( result );
 		assert( result == 'John' );
 
@@ -358,56 +355,56 @@ component extends="voib.tests.src.baseTest" {
 
 		// yes we can get a simple method call's return - note that no args are provided as yet.
 		data = { obj = obj };
-		result = dataExpressionResolver.resolveExpression( 'g?{obj.sing()}', data );
+		result = dataExpressionResolver.resolveExpression( 'v?{obj.sing()}', data );
 		debug( result );
 		assert( result == 'Hey,Jude' );
 
 		data = { obj = obj };
-		result = dataExpressionResolver.resolveExpression( 'g?{obj.getBand()}', data );
+		result = dataExpressionResolver.resolveExpression( 'v?{obj.getBand()}', data );
 		debug( result );
 		assert( isStruct( result ) );
 		assert ( result['beatles'][1] == 'John' );
 
 		// NOTE: case insensitive
 		data = { BANDS = { 'beatles'= [ 'John','Paul','Ringo','George' ] } };
-		result = dataExpressionResolver.resolveExpression( 'g?{bands.beatles[1]}', data );
+		result = dataExpressionResolver.resolveExpression( 'v?{bands.beatles[1]}', data );
 		debug( result );
 		assert( result == 'John' );
 
 		data = {};
-		result = dataExpressionResolver.resolveExpression( 'g?{obj.getBand()}', data );
+		result = dataExpressionResolver.resolveExpression( 'v?{obj.getBand()}', data );
 		debug( result );
 		assert( result == dataExpressionResolver.getInvalidExpression() );
 
 		data = {};
-		result = dataExpressionResolver.resolveExpression( 'g?{"ticket to ride"}', data );
+		result = dataExpressionResolver.resolveExpression( 'v?{"ticket to ride"}', data );
 		debug( result );
 		assert( result == 'ticket to ride' );
 
 		data = {};
 		request.bands = { 'beatles'= [ 'John','Paul','Ringo','George' ] };
-		result = dataExpressionResolver.resolveExpression( 'g?{request.bands.beatles[1]}', data );
+		result = dataExpressionResolver.resolveExpression( 'v?{request.bands.beatles[1]}', data );
 		debug( result );
 		assert( result == 'John' );
 
 		data = {};
 		request['BANDS'] = { 'beatles'= [ 'John','Paul','Ringo','George' ] };
-		result = dataExpressionResolver.resolveExpression( 'g?{request.bands.beatles[1]}', data );
+		result = dataExpressionResolver.resolveExpression( 'v?{request.bands.beatles[1]}', data );
 		debug( result );
 		assert( result == 'John' );
 
 		data = { bands = { 'beatles'= [ { 'firstname'="John", 'lastname'="Lennon" },{ 'firstname'="Paul", 'lastname'="McCartney" },{ 'firstname'="Ringo", 'lastname'="Starr" },{ 'firstname'="George", 'lastname'="Harrison" } ] } };
-		result = dataExpressionResolver.resolveExpression( 'g?{bands.beatles[1].FIRSTNAME}', data );
+		result = dataExpressionResolver.resolveExpression( 'v?{bands.beatles[1].FIRSTNAME}', data );
 		debug( result );
 		assert( result == 'John' );
 
 		data = { 'bands' = { 'beatles'= [ 'John','Paul','Ringo','George' ] } };
-		result = dataExpressionResolver.resolveExpression( 'g?{bands.beatles[1]}', data );
+		result = dataExpressionResolver.resolveExpression( 'v?{bands.beatles[1]}', data );
 		debug( result );
 		assert( result == 'John' );
 
 		data = { 'beatles'= [ { 'firstName'="John", 'lastName'="Lennon" },{ 'firstName'="Paul", 'lastName'="McCartney" },{ 'firstName'="Ringo", 'lastName'="Starr" },{ 'firstName'="George", 'lastName'="Harrison" } ] };
-		result = dataExpressionResolver.resolveExpression( 'g?{beatles[1].firstName}', data );
+		result = dataExpressionResolver.resolveExpression( 'v?{beatles[1].firstName}', data );
 		debug( result );
 		assert( result == 'John' );
 

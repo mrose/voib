@@ -112,6 +112,11 @@ hint="a really simple logger" {
 
 		// railo only log to console
 		writelog( type=typ, text=lcase( arguments.level ) & ': ' & arguments.message, application=TRUE, log='console' );
+
+		// ACF version:
+		//	msg = "[" & arguments.level & "] " & msg;
+		//	var sys = createObject( 'java', 'java.lang.System' );
+		//	sys.out.println( msg );
 	}
 
 

@@ -80,17 +80,18 @@ for getting applied." {
 
 
 
-	public void function execute() hint="performs the primary processing task of the framework" {
+	public void function execute( any command, any context ) hint="performs the primary processing task of the framework" {
 		throw( type="Method.NotImplemented", message="The basehandler's execute method is abstract and must be overridden" );
-		getContext().debug(  getName() & ': completed' );
+		var cmd = structKeyExists( arguments, 'command' )? arguments.command : getCommand();
+		var cxt = structKeyExists( arguments, 'context' )? arguments.context : getContext();
+		cxt().debug(  getName() & ': completed' );
 	}
 
 
 
-	public boolean function acceptable() {
-
-		var cmd = getCommand();
-		var cxt = getContext();
+	public boolean function acceptable( any command, any context ) {
+		var cmd = structKeyExists( arguments, 'command' )? arguments.command : getCommand();
+		var cxt = structKeyExists( arguments, 'context' )? arguments.context : getContext();
 
 		if ( !hasValidCommand( cmd.getName() ) ) {
 			cxt.debug( getName() & ': does not listen for command #cmd.getName()#' );
@@ -201,7 +202,7 @@ for getting applied." {
 
 
 	public any function onMissingMethod( required string missingMethodName, required struct missingMethodArguments ) {
-		var result = invoke( getContext(), missingMethodName, missingMethodArguments );
+		return invoke( getContext(), arguments.missingMethodName, arguments.missingMethodArguments );
 	}
 
 

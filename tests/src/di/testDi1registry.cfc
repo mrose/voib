@@ -2,7 +2,7 @@ component extends="voib.tests.src.di.testBaseregistry" {
 
 
 	public void function setUp() {
-		registry = new voib.src.di.di1registry( '/voib/tests/resources/di' );
+		registry = new voib.src.di.di1registry( '/voib/tests/resources/' );
 	}
 
 
@@ -17,24 +17,26 @@ component extends="voib.tests.src.di.testBaseregistry" {
 
 	// can load beans
 	public void function testCanLoadBeans() {
-		fail( 'todo' );
+		assert( !structIsEmpty( registry.getBeanInfo().beanInfo ) );
 	}
+
 
 	// getAll
 	public void function testGetAll() {
-		fail( 'todo' );
+		assert( !arrayIsEmpty( registry.getAll() ) );
 	}
 
 
 	// containsBean
 	public void function testContainsBean() {
-		fail( 'todo' );
+//		debug( registry.getBeanInfo().beanInfo );
+		assert( registry.containsBean('testHandler') );
 	}
 
 
 	// getBean
 	public void function testGetBean() {
-		fail( 'todo' );
+		assert( isInstanceOf( registry.getBean('testHandler'), 'voib.tests.resources.testHandler' ) );
 	}
 
 

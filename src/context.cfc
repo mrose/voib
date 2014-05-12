@@ -5,11 +5,12 @@ hint="an invocation context" {
 
 // provides a facade to logging operations with its logger
 // provides api for command creation and processing
-// maps handlers to commands with its mapper
+// provides handler mapping facilities
 
 	property name="deque"            type="any"     setter="FALSE";
 	property name="logger"           type="any"     setter="FALSE" hint="Required. Defaults to a no-op logger";
-	property name="mapping"          type="any"     setter="FALSE" hint="Required. Defaults to a default mapping";
+	property name="registry"         type="any"     setter="FALSE" hint="Required. A DI registry. Sefaults to a no-op registry";
+	property name="defaultHandlers"  type="any"     setter="FALSE" hint="an array of default handlers";
 	property name="result"           type="any"                    hint="Optional return value. Defaults to TRUE";
 	property name="throwOnException" type="boolean" setter="FALSE" hint="Optional. Determines how exceptions are handled. Defaults to FALSE";
 
@@ -19,9 +20,11 @@ hint="an invocation context" {
 
 		variables.deque = createObject( 'java', 'java.util.ArrayDeque' );
 		variables.logger = structKeyExists( arguments, 'logger' )? arguments.logger : new voib.src.logger( level=loglevel );
-		variables.mapping = structKeyExists( arguments, 'mapping' )? arguments.mapping : new voib.src.mapping.basemapping();
+		variables.registry = structKeyExists( arguments, 'registry' ) ? arguments.registry : new voib.src.di.baseregistry();
+variables.defaultHandlers = [ ];
 		setResult( structKeyExists( arguments, 'result' )? arguments.result : TRUE );
 		variables.throwOnException = structKeyExists( arguments, 'throwOnException' )? arguments.throwOnException : FALSE;
+		variables.command = FALSE;
 
 		// GLOBAL PER-REQUEST FRAMEWORK CONTROL ELEMENTS
 		// do not mess with these unless you know what you're doing
@@ -47,7 +50,7 @@ hint="an invocation context" {
 
 			// but not the ones this context uses as private properties
 			structDelete( request['voib'], 'logger' );
-			structDelete( request['voib'], 'mapping' );
+			structDelete( request['voib'], 'registry' );
 			structDelete( request['voib'], 'throwOnException' );
 		}
 
@@ -58,12 +61,10 @@ hint="an invocation context" {
 
 
 	public any function onMissingMethod( missingMethodName, missingMethodArguments ) {
-		var cmd = FALSE;
 		var result = getResult();
 
-// TODO: this is a bad way to determine if in play
-		// if there's a command already in play
-		if ( !variables.deque.isEmpty() ) {
+		if ( isValid( 'component', variables.command ) ) {
+			debug( 'context in play - dispatching new' );
 			return dispatch( arguments.missingMethodName, arguments.missingMethodArguments );
 		}
 
@@ -78,22 +79,22 @@ hint="an invocation context" {
 
 			while ( !variables.deque.isEmpty() ) {
 
-				cmd = variables.deque.pop() ; // no peek()ing here as we will get fablunged
+				variables.command = variables.deque.pop() ; // no peek()ing here as we will get fablunged
 
 				if ( ++request['voib']['processingSequence'] > request['voib']['maximumCommands'] ) {
 					throw( type='MaximumCommandsException', message='The maximum number of Commands (#request['voib']['maximumCommands']#) that can be processed has been exceeded' );
 				}
 
-				info( 'Process of command #cmd.getName()# starts, invocation #request['voib']['invocationDepth']#, processingSequence #request['voib']['processingSequence']#, #variables.deque.size()# commands remaining' );
+				info( 'Process of command #variables.command.getName()# starts, invocation #request['voib']['invocationDepth']#, processingSequence #request['voib']['processingSequence']#, #variables.deque.size()# commands remaining' );
 
-				cmd.setMemento( duplicate( request['voib']['data'] ) );
-				processCommand( cmd );
+//				cmd.setMemento( duplicate( request['voib']['data'] ) ); // not yet
+				processCommand( variables.command );
 
 				// place the processed command onto audit stack for possible undo
-				arrayAppend( request['voib']['executedCommands'], cmd ); 
-				info( 'Process of command #cmd.getName()# ends with #request['voib']['invocationControl']#' );
+				arrayAppend( request['voib']['executedCommands'], variables.command ); // by value!
+				info( 'Process of command #variables.command.getName()# ends with #request['voib']['invocationControl']#' );
 
-				if ( !shouldContinue() ) {
+				if ( halted() ) {
 					break;
 				}
 
@@ -106,6 +107,7 @@ hint="an invocation context" {
 			debug( 'invocation #request['voib']['invocationDepth']--# ends' );
 
 		}
+		variables.command = FALSE;
 
 		return getResult();
 	}
@@ -124,21 +126,17 @@ hint="an invocation context" {
 			while ( arrayLen( handlers ) > i ) {
 
 				h = handlers[++i];
+				// accomodate transient handlers here
 				h.setContext( this );
 				h.setCommand( arguments.command );
-				h.execute();
+				// accomodate singleton handlers here
+				h.execute( arguments.command, this );
 
-				if ( !this.shouldContinue() ) {
+				if ( halted() ) {
 					break;
 				}
 			}
 		}
-	}
-
-
-
-	public boolean function shouldContinue() {
-		return compareNoCase( request['voib']['invocationControl'], 'halt' );
 	}
 
 
@@ -151,15 +149,30 @@ hint="an invocation context" {
 			return TRUE;
 		}
 
-		cmd.setHandlers( this.getMapping().getHandlers( cmd ) );
+		cmd.setHandlers( getDefaultHandlers() );
+		lock name='mapHandlersLock' type='exclusive' timeout='500' throwOnTimeout='TRUE' {
+			// broadcast style, filtering is expected to be applied in the handlers
+			handlers = getRegistry().getAll();
+			if ( !arrayIsEmpty( handlers ) ) {
+				cmd.setHandlers( handlers );
+			}
+			// nn this.debug( getMetaData( this ).name & ': assigned #arrayLen( handlers )# handlers to command #arguments.command.getName()#' );
+		}
+
 		if ( cmd.hasHandlers() ) {
 			this.debug( 'Handler(s) #cmd.getHandlerNames()# are now mapped to command #cmd.getName()#' );
 			return TRUE;
 		}
 
-		// if you are using the standard 'broadcast' mapping (multicastmapping.cfc) this should not happen
-		dispatch( name='noHandlerFound', args={ 'command'=cmd } );
+		// this should not happen unless both defaultHandlers and registry are blankety blank
+		warn( 'No handlers were mapped to #cmd.getAccess()# command #cmd.getName()#' );
 		return FALSE;
+	}
+
+
+
+	public boolean function halted() {
+		return !abs( compareNoCase( request['voib']['invocationControl'], 'halt' ) );
 	}
 
 
@@ -213,8 +226,7 @@ hint="an invocation context" {
 	// ---------------------- API for command invocation ------------------------ //
 
 	public any function dispatch() hint="takes multiple duck-typed arguments" {
-		var cxt = new context( logger=getLogger(), mapping=getMapping() );
-		debug( 'created new context' );
+		var cxt = new context( logger=getLogger(), registry=getRegistry() );
 		return cxt.onMissingMethod( argumentCollection = arguments );
 	}
 
@@ -352,20 +364,8 @@ hint="an invocation context" {
 
 
 
-	public any function dequeueCommand() {
-		return variables.deque.pop();
-	}
-
-
-
 	public boolean function hasCommands() {
 		return !variables.deque.isEmpty();
-	}
-
-
-
-	public any function destackCommand() {
-		return variables.deque.pop();
 	}
 
 
@@ -384,8 +384,38 @@ hint="an invocation context" {
 
 	// ---------------------- candy API for data ------------------------ //
 
+	public void function set( required string key, required any value ) {
+		request['voib']['data'][arguments.key] = arguments.value;
+	}
+
+
+
+	public any function get( required string key, any defaultValue, boolean keepDefaultValue ) {
+		if ( ( !structKeyExists( request['voib']['data'], arguments.key ) && ( structKeyExists( arguments, 'defaultValue' ) ) ) ) {
+			if ( structKeyExists( arguments, 'keepDefaultValue') && ( arguments.keepDefaultValue ) ) {
+				set( arguments.key, arguments.defaultValue );
+			}
+			return arguments.defaultValue;
+		}
+		return request['voib']['data'][arguments.key];
+	}
+
+
+
+	public boolean function isDefined( required string key ) {
+		return structKeyExists( request['voib']['data'], arguments.key );
+	}
+
+
+
+	public void function remove( required string key ) {
+		structDelete( request['voib']['data'], arguments.key );
+	}
+
+
+
 	public voib.src.context function setData( required struct data ) {
-		variables.data = arguments.data;
+		request['voib']['data'] = arguments.data;
 		return this; // allow method chaining
 	}
 
@@ -397,38 +427,8 @@ hint="an invocation context" {
 
 
 
-	public void function appendData( required struct data , boolean overwrite=TRUE ) {
+	public void function appendData( required struct data , required boolean overwrite=TRUE ) {
 		structAppend( request['voib']['data'], arguments.data, arguments.overwrite );
-	}
-
-
-
-	public void function setDataElement( required string key, required any value ) {
-		request['voib']['data'][arguments.key] = arguments.value;
-	}
-
-
-
-	public any function getDataElement( required string key, any defaultValue, boolean keepDefaultValue ) {
-		if ( ( !structKeyExists( request['voib']['data'], arguments.key ) && ( structKeyExists( arguments, 'defaultValue' ) ) ) ) {
-			if ( structKeyExists( arguments, 'keepDefaultValue') && ( arguments.keepDefaultValue ) ) {
-				setDataElement( arguments.key, arguments.defaultValue );
-			}
-			return arguments.defaultValue;
-		}
-		return request['voib']['data'][arguments.key];
-	}
-
-
-
-	public boolean function isDataElementDefined( required string key ) {
-		return structKeyExists( request['voib']['data'], arguments.key );
-	}
-
-
-
-	public void function removeDataElement( required string key ) {
-		structDelete( request['voib']['data'], arguments.key );
 	}
 
 }

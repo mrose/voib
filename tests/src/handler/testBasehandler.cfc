@@ -48,6 +48,11 @@ component extends="voib.tests.src.baseTest" {
 	}
 
 
+	public void function testCommentAnnotations() {
+		fail( 'todo' );
+	}
+
+
 	// the basehandler execute should throw an error of type "Method.NotImplemented"
 	/**
 	* @mxunit:expectedException Method.NotImplemented
@@ -167,10 +172,4 @@ component extends="voib.tests.src.baseTest" {
 		assert( handler.acceptable() );
 	}
 
-
-
-	public void function testOnMissingMethod() {
-		// missing methods and their arguments are provided to the context for fulfillment
-		fail( 'code me' );
-	}
 }
